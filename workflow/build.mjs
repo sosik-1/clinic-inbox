@@ -19,11 +19,12 @@ const intakeCode = `${CORE}
 const ROSTER = ${JSON.stringify(ROSTER)};
 const body = $input.first().json.body || {};
 const list = (Array.isArray(body.inquiries) ? body.inquiries : [body]).filter((x) => x && String(x.text || "").trim());
-const sd = $getWorkflowStaticData("global");
-sd.next = sd.next || 1001;
+// 접수번호: n8n 실행 번호로 만들어요. 실행 번호는 데이터베이스가 겹치지 않게 하나씩 매기고(지운 번호도 다시 안 씀),
+// 동시에 여러 문의가 들어와도 겹치지 않아요. (예전처럼 "다음 번호"를 기억해 두면 동시에 온 문의가 같은 번호를 받았어요)
+const base = 1000 + Number($execution.id);
 const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).replace("T", " ");
-const items = list.map((x) => {
-  const id = "R-" + sd.next++;
+const items = list.map((x, i) => {
+  const id = list.length > 1 ? "R-" + base + "-" + (i + 1) : "R-" + base;
   const name = String(x.name || "").trim();
   const m = mask(String(x.text).slice(0, 2000), name ? [name] : [], ROSTER);
   return { id, channel: String(x.channel || "기타"), name, phone: String(x.phone || ""), at: now, masked: m.masked, map: m.map };
