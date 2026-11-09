@@ -26,8 +26,12 @@ const now = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 16).re
 const items = list.map((x, i) => {
   const id = list.length > 1 ? "R-" + base + "-" + (i + 1) : "R-" + base;
   const name = String(x.name || "").trim();
-  const m = mask(String(x.text).slice(0, 2000), name ? [name] : [], ROSTER);
-  return { id, channel: String(x.channel || "기타"), name, phone: String(x.phone || ""), at: now, masked: m.masked, map: m.map };
+  const raw = String(x.text).slice(0, 2000);
+  const m = mask(raw, name ? [name] : [], ROSTER);
+  // 병원 안(상담 대장·상담실장 화면)에 남길 원문. 주민번호만은 병원 안에서도 가려 둬요 (문의로 받지 않는 정보라서)
+  let original = raw;
+  for (const e of m.map) if (e.kind === "주민번호") original = original.split(e.value).join("[주민번호]");
+  return { id, channel: String(x.channel || "기타"), name, phone: String(x.phone || ""), at: now, masked: m.masked, map: m.map, original };
 });
 return [{ json: { items, body: items.length ? buildRequest(items) : null } }];`;
 
@@ -45,7 +49,9 @@ const lines = records.map((r) => {
   const x = byId[r.id];
   const notes = [r.safety_net ? "안전망 규칙으로 긴급" : "", r.pii_warning, r.failed ? r.reason : ""].filter(Boolean).join(" / ");
   return [r.id, x.at, x.channel, x.name, x.phone, r.procedure, r.types.join(", "), r.urgency, r.department,
-    r.ad_risk === "없음" ? "" : "주의: " + r.ad_risk, r.missing.join(", "), r.summary, x.masked, r.draft, "검토 전", notes].map(csv).join(",");
+    r.ad_risk === "없음" ? "" : "주의: " + r.ad_risk, r.missing.join(", "), r.summary, x.masked, r.draft, "검토 전", notes,
+    // 병원 안에서만 보는 원문과, AI로 보낼 때 무엇을 무엇으로 바꿨는지(대조표). AI로는 가린 글만 나가요
+    x.original, JSON.stringify(x.map.filter((e) => e.kind !== "주민번호").map((e) => [e.tag, e.value]))].map(csv).join(",");
 }).join("\\r\\n") + "\\r\\n";
 // 간호팀 알림에는 이름·연락처를 넣지 않고 접수번호만 보내요
 const urgent = records.filter((r) => r.urgency === "긴급").map((r) => "[긴급] " + r.id + " · " + r.procedure + " · " + r.types[0] + " · " + byId[r.id].channel + " · 상담 화면에서 확인해 주세요");

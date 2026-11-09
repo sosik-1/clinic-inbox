@@ -5,7 +5,7 @@ Set-Location $PSScriptRoot
 New-Item -ItemType Directory -Force records | Out-Null
 $ledger = "records\상담대장.csv"
 if (-not (Test-Path $ledger)) {
-  $head = '"접수번호","접수시각","채널","이름","연락처","시술","문의 종류","급한 정도","담당 부서","광고 주의","빠진 정보","요약","가린 문의 내용","답변 초안","상태","비고"'
+  $head = '"접수번호","접수시각","채널","이름","연락처","시술","문의 종류","급한 정도","담당 부서","광고 주의","빠진 정보","요약","가린 문의 내용","답변 초안","상태","비고","문의 원문","가린 정보"'
   [IO.File]::WriteAllText((Join-Path $PSScriptRoot $ledger), "$head`r`n", (New-Object Text.UTF8Encoding $true))
 }
 node workflow/build.mjs

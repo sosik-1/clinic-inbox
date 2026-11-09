@@ -71,8 +71,18 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const num=id=>Number(String(id).replace(/\\D/g,""))||0;
 const isU=r=>r["급한 정도"]==="긴급", isW=r=>!!(r["광고 주의"]||/주민번호/.test(r["비고"]));
 ROWS.sort((a,b)=>isU(a)!==isU(b)?(isU(a)?-1:1):num(b["접수번호"])-num(a["접수번호"]));
-const st={f:"all",q:"",sel:ROWS[0]&&ROWS[0]["접수번호"]};
+// 주소 끝에 #R-1063 처럼 접수번호를 붙이면 그 문의를 바로 열어요 (알림에서 바로 들어올 때)
+const want=decodeURIComponent(location.hash.slice(1));
+const st={f:"all",q:"",sel:(ROWS.find(r=>r["접수번호"]===want)||ROWS[0]||{})["접수번호"]};
 const pill=u=>u==="긴급"?'<span class="pill p-u">긴급</span>':u==="보통"?'<span class="pill p-m">보통</span>':'<span class="pill p-l">'+esc(u||"-")+'</span>';
+// 원문에서 AI로 보낼 때 가린 부분을 노랗게 표시 (대조표 '가린 정보'를 보고 찾음)
+const marked=(o,mj)=>{let m=[];try{m=JSON.parse(mj||"[]")}catch(e){}
+  m.sort((a,b)=>b[1].length-a[1].length);
+  const S=String.fromCharCode(1),E=String.fromCharCode(2);let t=String(o);
+  m.forEach((e,k)=>{t=t.split(e[1]).join(S+k+E)});
+  t=esc(t);
+  m.forEach((e,k)=>{t=t.split(S+k+E).join('<mark title="AI에는 '+esc(e[0])+'(으)로 보냈어요">'+esc(e[1])+'</mark>')});
+  return t.split('[주민번호]').join('<span class="tag">[주민번호]</span>');};
 const tagged=s=>esc(s).replace(/\\[(?:환자|연락처|이메일|계정)\\d+\\]|\\[주민번호\\]/g,m=>'<span class="tag">'+m+'</span>');
 function pass(r){ if(st.f==="urgent"&&!isU(r))return false; if(st.f==="warn"&&!isW(r))return false; if(st.f==="miss"&&!r["빠진 정보"])return false;
   return !st.q||Object.values(r).join(" ").includes(st.q); }
@@ -94,7 +104,9 @@ function render(){
     if(r["광고 주의"]) al+='<div class="alert w">'+IC+'<div><b>의료광고 '+esc(r["광고 주의"])+'</b>전후 사진·할인 약속은 메신저로 하지 말고 내원 상담으로 안내해 주세요.</div></div>';
     if(r["비고"]) al+='<div class="alert w">'+IC+'<div><b>확인할 것</b>'+esc(r["비고"])+'</div></div>';
     d.innerHTML='<div class="dhead"><div><span class="idchip">'+esc(r["접수번호"])+'</span><h2>'+esc(r["요약"])+'</h2><div class="meta"><span><span class="chdot" style="display:inline-block;margin-right:6px;background:'+chc(r["채널"])+'"></span>'+esc(r["채널"])+'</span><span>'+esc(r["접수시각"])+' 접수</span><span>'+esc(r["이름"]||"이름 없음")+' '+esc(r["연락처"])+'</span></div></div><div class="right">'+pill(r["급한 정도"])+'<span class="pill p-l">담당 '+esc(r["담당 부서"])+'</span></div></div>'+al
-      +'<div class="sect"><h3><span class="n">1</span>AI로 보낸 글 (가린 상태)</h3><div class="textbox ai">'+tagged(r["가린 문의 내용"])+'</div><div class="cap">원문은 AI에 보내지 않았어요. 이름·연락처는 따로 받은 칸으로 위에 보여요.</div></div>'
+      +(r["문의 원문"]
+        ? '<div class="sect"><h3><span class="n">1</span>문의 원문</h3><div class="textbox">'+marked(r["문의 원문"],r["가린 정보"])+'</div><div class="cap"><mark>노란 부분</mark>은 가려서 AI에 보냈어요. AI는 [환자1] 같은 표시만 받았어요. 주민번호는 병원 안에서도 가려 둬요.</div><details><summary>AI에는 이렇게 보냈어요</summary><div class="textbox ai" style="margin-top:6px">'+tagged(r["가린 문의 내용"])+'</div></details></div>'
+        : '<div class="sect"><h3><span class="n">1</span>문의 내용</h3><div class="textbox ai">'+tagged(r["가린 문의 내용"])+'</div><div class="cap">원문을 저장하기 전에 들어온 문의라 가린 글만 남아 있어요.</div></div>')
       +'<div class="sect"><h3><span class="n">2</span>AI 분류 결과</h3><div class="facts"><div><small>시술 종류</small><b>'+esc(r["시술"])+'</b></div><div><small>문의 종류</small><b>'+esc(r["문의 종류"])+'</b></div><div><small>급한 정도</small><b>'+pill(r["급한 정도"])+'</b></div><div><small>담당 부서</small><b>'+esc(r["담당 부서"])+'</b></div><div><small>빠진 정보</small><b class="'+(r["빠진 정보"]?"miss":"")+'">'+esc(r["빠진 정보"]||"없음")+'</b></div></div></div>'
       +'<div class="sect"><h3><span class="n">3</span>답변 초안 · 상담실장 검토 후 발송</h3><div class="editor"><div class="bar"><span class="pill p-m">AI 초안</span>고쳐서 쓰세요. 이 화면에서 보내지는 않아요</div><textarea id="draft" aria-label="답변 초안">'+esc(r["답변 초안"])+'</textarea><div class="foot"><span class="note">상태: '+esc(r["상태"])+'</span><button type="button" class="btn primary" id="copy">초안 복사</button></div></div></div>';
     document.getElementById("copy").onclick=async e=>{try{await navigator.clipboard.writeText(document.getElementById("draft").value);e.target.textContent="복사했어요";}catch{e.target.textContent="복사가 막혔어요";}};
