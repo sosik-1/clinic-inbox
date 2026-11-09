@@ -4,3 +4,4 @@ node_modules/
 records/
 eval/results/
 n8n.log
+n8n-debug.log

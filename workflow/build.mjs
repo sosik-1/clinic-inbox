@@ -65,7 +65,11 @@ return [{
 }];`;
 
 // ===== [3] 상담실장 화면 =====
-const boardCode = fs.readFileSync(path.join(here, "board.js"), "utf8");
+// 디자인은 시안 화면(design/template.html)의 CSS를 그대로 가져와요
+const tpl = fs.readFileSync(path.join(here, "..", "design", "template.html"), "utf8");
+const CSS = tpl.slice(tpl.indexOf("<style>") + 7, tpl.indexOf("</style>"));
+if (CSS.includes("`") || CSS.includes("\\") || CSS.includes("${")) throw new Error("CSS에 백틱·역슬래시·${ 가 있으면 화면 코드가 깨져요");
+const boardCode = fs.readFileSync(path.join(here, "board.js"), "utf8").replace("__CSS__", CSS);
 
 const nodes = [
   { id: "c1000000-0000-4000-8000-000000000001", name: "문의 받기", type: "n8n-nodes-base.webhook", typeVersion: 2, position: [0, 300],
