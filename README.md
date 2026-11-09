@@ -100,3 +100,9 @@ node send-demo.mjs  # 네 채널 예시 문의 6건 보내기 (약 60원)
 - `workflow/build.mjs`: core.js를 넣어 `clinic-inbox.workflow.json`을 만들어요. `workflow/board.js`는 상담실장 화면이에요.
 - `eval/`: 정답 시험(`cases.json` 40문제, `run.mjs`)과 가리기 시험(`mask-test.mjs`)
 - `index.html`: 시안 화면 (예시 데이터)
+- `design/`: 화면 디자인
+  - `template.html`: 시안과 상담실장 화면이 같이 쓰는 CSS가 들어 있어요.
+  - `data.js`: 시안 예시 데이터예요.
+  - `build-page.mjs`: 위 두 파일로 `index.html`을 만들어요.
+  - 캡처: `screenshot-mockup.png`, `screenshot-board.png`
+  - 디자인을 고친 뒤에는 `node design/build-page.mjs`와 `.\setup-n8n.ps1`을 다시 실행해요.
